@@ -1,0 +1,387 @@
+openapi: 3.0.3
+info:
+  title: Sample User API
+  version: 1.0.0
+  description: |
+    A sample OpenAPI specification for a simple user management API.
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: https://staging-api.example.com/v1
+    description: Staging
+
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: Users
+    description: User management endpoints
+
+paths:
+  /auth/token:
+    post:
+      tags: [Auth]
+      summary: Issue an access token
+      description: |
+        Issues a JWT access token using email and password.
+      operationId: issueToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+            examples:
+              example:
+                value:
+                  email: alice@example.com
+                  password: Passw0rd!
+      responses:
+        "200":
+          description: Token issued successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      operationId: listUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Max number of items to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          description: Pagination cursor returned by previous calls
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A paginated list of users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    post:
+      tags: [Users]
+      summary: Create a user
+      operationId: createUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreateRequest"
+            examples:
+              example:
+                value:
+                  email: bob@example.com
+                  displayName: Bob
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get a user
+      operationId: getUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+    patch:
+      tags: [Users]
+      summary: Update a user
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdateRequest"
+            examples:
+              example:
+                value:
+                  displayName: "Bob The Builder"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags: [Users]
+      summary: Delete a user
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Deleted successfully (no content)
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: User ID (UUID)
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized (missing or invalid token)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            example:
+              value:
+                code: UNAUTHORIZED
+                message: Missing or invalid access token
+                requestId: req_01HX3ZKZ9N3H9A5J2WQZ
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            example:
+              value:
+                code: NOT_FOUND
+                message: The requested resource was not found
+                requestId: req_01HX3ZKZ9N3H9A5J2WQZ
+
+    ConflictError:
+      description: Conflict (e.g., already exists)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            example:
+              value:
+                code: CONFLICT
+                message: User already exists
+                requestId: req_01HX3ZKZ9N3H9A5J2WQZ
+
+    ValidationError:
+      description: Validation error (unprocessable entity)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationError"
+          examples:
+            example:
+              value:
+                code: VALIDATION_ERROR
+                message: One or more fields are invalid
+                requestId: req_01HX3ZKZ9N3H9A5J2WQZ
+                details:
+                  - field: email
+                    reason: must be a valid email
+
+  schemas:
+    TokenRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: alice@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: Passw0rd!
+
+    TokenResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Seconds until expiration
+          example: 3600
+
+    User:
+      type: object
+      required: [id, email, displayName, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        email:
+          type: string
+          format: email
+          example: bob@example.com
+        displayName:
+          type: string
+          example: Bob
+        status:
+          type: string
+          description: User status
+          enum: [active, suspended]
+          example: active
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-10T12:34:56Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-01-11T09:00:00Z"
+
+    UserCreateRequest:
+      type: object
+      required: [email, displayName]
+      properties:
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 50
+
+    UserUpdateRequest:
+      type: object
+      description: Fields to update (at least one is required)
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 50
+        status:
+          type: string
+          enum: [active, suspended]
+      additionalProperties: false
+
+    UserListResponse:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for the next page (null if no more pages)
+          example: "cursor_01HX3ZKZ9N3H9A5J2WQZ"
+
+    Error:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        code:
+          type: string
+          example: INTERNAL_ERROR
+        message:
+          type: string
+          example: Something went wrong
+        requestId:
+          type: string
+          description: Request identifier for support/debug
+          example: req_01HX3ZKZ9N3H9A5J2WQZ
+
+    ValidationError:
+      allOf:
+        - $ref: "#/components/schemas/Error"
+        - type: object
+          required: [details]
+          properties:
+            details:
+              type: array
+              items:
+                type: object
+                required: [field, reason]
+                properties:
+                  field:
+                    type: string
+                    example: email
+                  reason:
+                    type: string
+                    example: must be a valid email
