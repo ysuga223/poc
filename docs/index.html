@@ -1,4 +1,4 @@
-<!doctype html>
+<!-- <!doctype html>
 <html>
   <head>
     <title>API Docs</title>
@@ -17,5 +17,26 @@
         dom_id: "#swagger-ui",
       });
     </script>
+  </body>
+</html> -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API Docs</title>
+    <style>
+      body {
+        margin: 0;
+      }
+      redoc {
+        display: block;
+      }
+    </style>
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+  </head>
+  <body>
+    <redoc spec-url="./openapi.yml"></redoc>
+    <noscript>JavaScript が無効です。</noscript>
   </body>
 </html>
